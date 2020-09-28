@@ -62,7 +62,7 @@
                                         <argument>-jar</argument>
                                         <argument>${project.build.directory}/${artifactId}-${version}-jar-with-dependencies.jar</argument>
                                         <argument>${project.basedir}/src/test/resources/morrow/str_9052.h</argument>
-                                        <argument>${project.basedir}/src/test/resources/morrow/struct.sed</argument>
+                                        <argument>${project.build.directory}/struct.sed</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -77,8 +77,8 @@
                                     <executable>replace-clang.sh</executable>
                                     <arguments>
                                         <argument>${project.basedir}/src/test/resources/morrow/mtcsa32.dll.c</argument>
-                                        <argument>${project.basedir}/src/test/resources/morrow/struct.sed</argument>
-                                        <argument>${project.basedir}/src/test/resources/morrow/mtcsa32-new.c</argument>
+                                        <argument>${project.build.directory}/struct.sed</argument>
+                                        <argument>${project.build.directory}/mtcsa32-new.c</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
