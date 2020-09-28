@@ -13,6 +13,7 @@ import java.util.Map;
 
 @Slf4j
 public class ClangGenerator {
+
       public static void main(String[] args)  {
           if (args.length != 2) {
               log.error("Please provide C input file and sed output file name.");
@@ -24,7 +25,7 @@ public class ClangGenerator {
           log.info("C Input file: " + args[0]);
           log.info("sed Output file: " + args[1]);
           try {
-              convertFile( args[0], args[1]);
+              processFile( args[0], args[1]);
           } catch (CoreException e) {
               e.printStackTrace();
               log.error("Core Execption", e);
@@ -34,7 +35,15 @@ public class ClangGenerator {
           }
       }
 
-    protected static void convertFile(String inFileName, String outFileName) throws CoreException, IOException {
+    /**
+     * Analyzes file and creates sed commands in a file
+     *
+     * @param inFileName input CLang file
+     * @param outFileName output file with sed commands
+     * @throws CoreException
+     * @throws IOException
+     */
+    protected static void processFile(String inFileName, String outFileName) throws CoreException, IOException {
         FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
         Map definedSymbols = new HashMap();
         String[] includePaths = new String[0];
@@ -49,9 +58,7 @@ public class ClangGenerator {
 
         Map<String, Integer> dataSizes = createDataSizeMap();
 
-        //System.out.println("------------------------------------------------");
         int offset = 0;
-        File outFile = new File("src/test/resources/morrow/struct2.sed");
         OutputStream ostream = null;
         try {
             ostream = new FileOutputStream(outFileName);
@@ -65,30 +72,7 @@ public class ClangGenerator {
             offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
-            int fieldSize;
-            if (si.equals("serialErrs")) {
-                fieldSize = 2*6*4;
-            } else {
-                fieldSize = dataSizes.get(fieldInfo.getSpecifier());
-            }
-
-            if (fieldSize==0) {
-                if (si.equals("sessionString")) {
-                    fieldSize=256;
-                }
-                if (si.equals("commPhoneNum")) {
-                    fieldSize=50;
-                }
-                if (si.equals("commInitString")) {
-                    fieldSize=50;
-                }
-                if (si.equals("baseAddr")) {
-                    fieldSize=4;
-                }
-            }
-            //System.out.println(si + ", " + fieldInfo.getSpecifier() + " offset: " + fieldInfo.getOffset());
-            // (int16_t *)(a1 + 204) -> a1->func_status_code
-
+            int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
             printSedLines(offset, si, fieldInfo, ostream);
             offset += fieldSize;
         }
@@ -96,6 +80,48 @@ public class ClangGenerator {
         ostream.close();
     }
 
+    /**
+     * Get size of a struct field
+     * Uses dataSizes mapo as input for basic data type sizes
+     *
+     * TODO: should be read from file to allow user to change it
+     * @param dataSizes
+     * @param si
+     * @param fieldInfo
+     * @return
+     */
+    private static int getFieldSize(Map<String, Integer> dataSizes, String si, FieldInfo fieldInfo) {
+        int fieldSize;
+        if (si.equals("serialErrs")) {
+            fieldSize = 2*6*4;
+        } else {
+            fieldSize = dataSizes.get(fieldInfo.getSpecifier());
+        }
+
+        if (fieldSize==0) {
+            if (si.equals("sessionString")) {
+                fieldSize=256;
+            }
+            if (si.equals("commPhoneNum")) {
+                fieldSize=50;
+            }
+            if (si.equals("commInitString")) {
+                fieldSize=50;
+            }
+            if (si.equals("baseAddr")) {
+                fieldSize=4;
+            }
+        }
+        return fieldSize;
+    }
+
+    /**
+     * Create map for sizes of data types
+     *
+     * TODO: should be read from file to allow user to change it
+     *
+     * @return
+     */
     public static Map<String, Integer> createDataSizeMap() {
         Map<String, Integer> dataSizes = new HashMap<>();
         dataSizes.put("char", 0); // n chars are n bytes
