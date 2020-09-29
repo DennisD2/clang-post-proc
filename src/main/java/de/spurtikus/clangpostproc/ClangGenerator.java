@@ -96,7 +96,7 @@ public class ClangGenerator {
      * @return
      * @throws CoreException
      */
-    private static IASTTranslationUnit getIastTranslationUnit(String inFileName) throws CoreException {
+    public static IASTTranslationUnit getIastTranslationUnit(String inFileName) throws CoreException {
         FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
         Map definedSymbols = new HashMap();
         String[] includePaths = new String[0];
@@ -119,7 +119,7 @@ public class ClangGenerator {
      * @param fieldInfo
      * @return
      */
-    private static int getFieldSize(Map<String, Integer> dataSizes, String si, FieldInfo fieldInfo) {
+    public static int getFieldSize(Map<String, Integer> dataSizes, String si, FieldInfo fieldInfo) {
         int fieldSize;
         if (si.equals("serialErrs")) {
             fieldSize = 2*6*4;

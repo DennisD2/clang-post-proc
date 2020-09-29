@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static de.spurtikus.clangpostproc.ClangGenerator.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ParserTest {
@@ -231,56 +232,28 @@ public class ParserTest {
     @Test
     public void testDumpSolutions() throws CoreException, IOException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
         Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, "SET9052");
         //structInfo.keySet().forEach(si -> System.out.println(si + ", " + structInfo.get(si).getSpecifier()));
 
-        Map<String, Integer> dataSizes = ClangGenerator.createDataSizeMap();
+        Map<String, Integer> dataSizes = createDataSizeMap();
 
-        //System.out.println("------------------------------------------------");
         int offset = 0;
         for (String si : structInfo.keySet()) {
             FieldInfo fieldInfo = structInfo.get(si);
             offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
-            int fieldSize;
-            if (si.equals("serialErrs")) {
-                fieldSize = 2*6*4;
-            } else {
-                fieldSize = dataSizes.get(fieldInfo.getSpecifier());
-            }
+            int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
 
-            if (fieldSize==0) {
-                if (si.equals("sessionString")) {
-                    fieldSize=256;
-                }
-                if (si.equals("commPhoneNum")) {
-                    fieldSize=50;
-                }
-                if (si.equals("commInitString")) {
-                    fieldSize=50;
-                }
-                if (si.equals("baseAddr")) {
-                    fieldSize=4;
-                }
-            }
             //System.out.println(si + ", " + fieldInfo.getSpecifier() + " offset: " + fieldInfo.getOffset());
             // (int16_t *)(a1 + 204) -> a1->func_status_code
 
-            ClangGenerator.printSedLines(offset, si, fieldInfo, System.out);
+            printSedLines(offset, si, fieldInfo, System.out);
             offset += fieldSize;
         }
-
     }
 
 
