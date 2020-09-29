@@ -185,7 +185,7 @@ public class ClangGenerator {
                                      OutputStream outputStream) throws IOException {
         StringBuilder sb = new StringBuilder();
 
-            sb.append("s/\\(([a-z0-9]*[0-9]) \\+ ");
+            sb.append("s/\\(([a-z0-9]*) \\+ ");
             sb.append(offset);
             sb.append("\\)");
             sb.append("/\\&\\(\\1->");

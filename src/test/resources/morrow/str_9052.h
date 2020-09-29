@@ -259,6 +259,7 @@ uint32   z_cell_size;        /* 188: by code analysis, we have that value here !
 #endif
 
     /*SET9052LIB funcLink ;*/ /* 320 */
+    int fillerDD;
     int     m_DllHandle;
     int32_t   m_ClearDataFIFO;
     int32_t   m_CheckSWStatus;
