@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static de.spurtikus.clangpostproc.ClangGenerator.getIastTranslationUnit;
@@ -14,7 +15,7 @@ import static de.spurtikus.clangpostproc.ClangGenerator.getIastTranslationUnit;
 public class FunctionTest {
 
     @Test
-    public void testFunctionCalls() throws CoreException, IOException {
+    public void testFunctionCalls() throws CoreException, IOException, ExpansionOverlapsBoundaryException {
         String inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
@@ -61,7 +62,7 @@ public class FunctionTest {
 
     }
 
-    public void dumpFunction(CPPASTFunctionDefinition f) {
+    public void dumpFunction(CPPASTFunctionDefinition f) throws ExpansionOverlapsBoundaryException {
         int index = 0;
         IASTFunctionDeclarator declarator = f.getDeclarator();
         //System.out.println(declarator.getRawSignature());
@@ -80,7 +81,9 @@ public class FunctionTest {
         dumpFunctionInternal(f, index, functionArgs);
     }
 
-    private void dumpFunctionInternal(IASTNode f, int index, List<String> functionArgs) {
+    private static String[] knownFunctions = { "GetFuncStatusCode", "GetErrorStatus",
+            "ClearFuncStatusCode","TestFuncStatusAndPtr", "RdEngOption"};
+    private void dumpFunctionInternal(IASTNode f, int index, List<String> functionArgs) throws ExpansionOverlapsBoundaryException {
         String indent = "";
         for (int i = 0; i < index; i++) {
             indent += " ";
@@ -89,6 +92,8 @@ public class FunctionTest {
         if (f instanceof CPPASTFunctionCallExpression) {
             CPPASTFunctionCallExpression function = (CPPASTFunctionCallExpression) f;
             System.out.println(f.getRawSignature());
+            String funcName = function.getSyntax().toString();
+            System.out.println("funcName: " + funcName);
             IASTInitializerClause[] args = function.getArguments();
             for (IASTInitializerClause arg: args) {
                 System.out.println(arg.getClass());
@@ -97,7 +102,10 @@ public class FunctionTest {
                     String callArg = a.getName().toString();
                     System.out.println(callArg);
                     if (functionArgs.contains(callArg)) {
-                        System.out.println("Function argument '" + callArg + "' reused in known method call");
+                        boolean isKnown = Arrays.stream(knownFunctions).anyMatch( fu -> fu.equals(funcName));
+                        if (isKnown) {
+                            System.out.println("Function argument '" + callArg + "' reused in known method call");
+                        }
                     }
                 }
 
