@@ -200,6 +200,7 @@ typedef struct SAStruct
                                  /*   indicates extern ref is off.  1        */
                                  /*   activates the external reference.      */
 /* DD: added next line */
+int16   unknown_field;        /* 186: by code analysis, we have that value here !?! */
 uint32   z_cell_size;        /* 188: by code analysis, we have that value here !?! */
     uint32   err_status;         /* 154 last error that occured at low level     */
     uint16   interfaceType;      /* 158 the hardware platform this analyzer uses */
