@@ -94,15 +94,7 @@ public class ParserTest {
     public void testDumpStruct() throws CoreException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         //String inFileName = "src/test/resources/test-1/TestFile.cpp";
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
         IASTPreprocessorIncludeStatement[] includes = translationUnit.getIncludeDirectives();
         System.out.println("- INCLUDES ----------------------------------------------------");
         for (IASTPreprocessorIncludeStatement include : includes) {
@@ -117,15 +109,7 @@ public class ParserTest {
     public void testHowToUseExample() throws CoreException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         //String inFileName = "src/test/resources/test-1/TestFile.cpp";
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
         IASTPreprocessorIncludeStatement[] includes = translationUnit.getIncludeDirectives();
         System.out.println("- INCLUDES ----------------------------------------------------");
         for (IASTPreprocessorIncludeStatement include : includes) {
@@ -148,15 +132,7 @@ public class ParserTest {
     @Test
     public void testStructRead() throws CoreException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
         List<String> structNames = HeaderProcessor.getStructNames(translationUnit);
         structNames.forEach(System.out::println);
@@ -168,31 +144,13 @@ public class ParserTest {
     @Test
     public void testPrintOffsets() throws CoreException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
         Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, "SET9052");
         structInfo.keySet().forEach(si -> System.out.println(si + ", " + structInfo.get(si).getSpecifier()));
 
-        Map<String, Integer> dataSizes = new HashMap<>();
-        dataSizes.put("char", 0); // n chars are n bytes
-        dataSizes.put("int16", 2);
-        dataSizes.put("uint16", 2);
-        dataSizes.put("int", 4);
-        dataSizes.put("int32", 4);
-        dataSizes.put("uint32", 4);
-        dataSizes.put("void", 4); // void* = 4 bytes
-        dataSizes.put("USECS", 4);
-        dataSizes.put("SET9052LIB", 4); // assumption
-        dataSizes.put("double", 8);
-        dataSizes.put("FREQ8500", 8);
+        Map<String, Integer> dataSizes = createDataSizeMap();
+
         System.out.println("------------------------------------------------");
         int offset = 0;
         for (String si : structInfo.keySet()) {
@@ -200,27 +158,7 @@ public class ParserTest {
             offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
-            int fieldSize;
-            if (si.equals("serialErrs")) {
-                fieldSize = 2*6*4;
-            } else {
-                fieldSize = dataSizes.get(fieldInfo.getSpecifier());
-            }
-
-            if (fieldSize==0) {
-                if (si.equals("sessionString")) {
-                    fieldSize=256;
-                }
-                if (si.equals("commPhoneNum")) {
-                    fieldSize=50;
-                }
-                if (si.equals("commInitString")) {
-                    fieldSize=50;
-                }
-                if (si.equals("baseAddr")) {
-                    fieldSize=4;
-                }
-            }
+            int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
             offset += fieldSize;
             System.out.println(si + ", " + fieldInfo.getSpecifier() + " offset: " + fieldInfo.getOffset());
         }
