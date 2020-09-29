@@ -1,4 +1,5 @@
 // see sa_defin.h
+// s/SetFuncStatusCode\(([a-z]*[0-9]), ([0-9,-]+)\)/SetFuncStatusCode\(\1, \/\* W9902 \2 \*\/ \)/
 
 IE_WARN_SWPDONE     4
 IE_WARN_SPAN        3

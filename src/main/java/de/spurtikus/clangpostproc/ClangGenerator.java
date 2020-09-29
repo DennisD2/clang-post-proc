@@ -44,21 +44,29 @@ public class ClangGenerator {
      * @throws IOException
      */
     protected static void processFile(String inFileName, String outFileName) throws CoreException, IOException {
-        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
-        Map definedSymbols = new HashMap();
-        String[] includePaths = new String[0];
-        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
-        IParserLogService log = new DefaultLogService();
-        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
-        int opts = 8;
-        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
-                info, emptyIncludes, null, opts, log);
+        // Create translation unit
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, "SET9052");
-
+        // create data type sizes map (CPU dependent)
         Map<String, Integer> dataSizes = createDataSizeMap();
 
-        int offset = 0;
+        // process struct
+        String structToAnalyze = "SET9052";
+        processStruct(structToAnalyze, outFileName, translationUnit, dataSizes);
+    }
+
+    /**
+     * Creates sed command file for a struct.
+     *
+     * @param outFileName
+     * @param translationUnit
+     * @throws IOException
+     */
+    private static void processStruct(String structName, String outFileName,
+                                      IASTTranslationUnit translationUnit,
+                                      Map<String, Integer> dataSizes) throws IOException {
+        Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, structName);
+
         OutputStream ostream = null;
         try {
             ostream = new FileOutputStream(outFileName);
@@ -67,6 +75,7 @@ public class ClangGenerator {
             e.printStackTrace();
         }
 
+        int offset = 0;
         for (String si : structInfo.keySet()) {
             FieldInfo fieldInfo = structInfo.get(si);
             offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
@@ -81,8 +90,28 @@ public class ClangGenerator {
     }
 
     /**
+     * Get translation unit from file content
+     *
+     * @param inFileName file to scan
+     * @return
+     * @throws CoreException
+     */
+    private static IASTTranslationUnit getIastTranslationUnit(String inFileName) throws CoreException {
+        FileContent fileContent = FileContent.createForExternalFileLocation(inFileName);
+        Map definedSymbols = new HashMap();
+        String[] includePaths = new String[0];
+        IScannerInfo info = new ScannerInfo(definedSymbols, includePaths);
+        IParserLogService log = new DefaultLogService();
+        IncludeFileContentProvider emptyIncludes = IncludeFileContentProvider.getEmptyFilesProvider();
+        int opts = 8;
+        IASTTranslationUnit translationUnit = GPPLanguage.getDefault().getASTTranslationUnit(fileContent,
+                info, emptyIncludes, null, opts, log);
+        return translationUnit;
+    }
+
+    /**
      * Get size of a struct field
-     * Uses dataSizes mapo as input for basic data type sizes
+     * Uses dataSizes map as input for basic data type sizes
      *
      * TODO: should be read from file to allow user to change it
      * @param dataSizes
