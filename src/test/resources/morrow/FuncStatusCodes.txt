@@ -1,14 +1,14 @@
 // see sa_defin.h
 
-IE_WARN_SWPDONE 4
-IE_WARN_SPAN 3
+IE_WARN_SWPDONE     4
+IE_WARN_SPAN        3
 
-IE_SUCCESS 0
-IE_FAILURE -1
-IE_ERROR -2
-IE_ERR_VALS -3
+IE_SUCCESS          0
+IE_FAILURE          -1
+IE_ERROR            -2
+IE_ERR_VALS         -3
 
-IE_ERR_STEP -6
+IE_ERR_STEP         -6
 
-IE_ERR_ENGMOD -13
-IE_ERR_NOSWP -14
+IE_ERR_ENGMOD       -13
+IE_ERR_NOSWP        -14
