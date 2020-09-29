@@ -50,43 +50,42 @@ public class ClangGenerator {
         // create data type sizes map (CPU dependent)
         Map<String, Integer> dataSizes = createDataSizeMap();
 
+        OutputStream ostream = StreamHelper.getOutputStream(outFileName);
+
         // process struct
         String structToAnalyze = "SET9052";
-        processStruct(structToAnalyze, outFileName, translationUnit, dataSizes);
+        processStruct(structToAnalyze, ostream, translationUnit, dataSizes);
+
+        inFileName = "src/test/resources/morrow/sa_defin.h";
+        translationUnit = getIastTranslationUnit(inFileName);
+        FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, ostream);
+
+        StreamHelper.closeStream(ostream);
     }
 
     /**
-     * Creates sed command file for a struct.
-     *
-     * @param outFileName
+     *  Creates sed command file for a struct.
+     * @param structName
+     * @param ostream
      * @param translationUnit
+     * @param dataSizes
      * @throws IOException
      */
-    private static void processStruct(String structName, String outFileName,
+    private static void processStruct(String structName, OutputStream ostream,
                                       IASTTranslationUnit translationUnit,
                                       Map<String, Integer> dataSizes) throws IOException {
-        Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, structName);
-
-        OutputStream ostream = null;
-        try {
-            ostream = new FileOutputStream(outFileName);
-        } catch (FileNotFoundException e) {
-            System.out.println("Cannot write file");
-            e.printStackTrace();
-        }
+        Map<String,FieldInfo> structInfo = StructProcessor.getStructInfo(translationUnit, structName);
 
         int offset = 0;
         for (String si : structInfo.keySet()) {
             FieldInfo fieldInfo = structInfo.get(si);
-            offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
+            offset = StructProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
             int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
-            printSedLines(offset, si, fieldInfo, ostream);
+            writeSedLines(offset, si, fieldInfo, ostream);
             offset += fieldSize;
         }
-        ostream.flush();
-        ostream.close();
     }
 
     /**
@@ -182,7 +181,7 @@ public class ClangGenerator {
      * @param outputStream
      * @throws IOException
      */
-    public static void printSedLines(int offset, String si, FieldInfo fieldInfo,
+    public static void writeSedLines(int offset, String si, FieldInfo fieldInfo,
                                      OutputStream outputStream) throws IOException {
         StringBuilder sb = new StringBuilder();
 
@@ -194,7 +193,7 @@ public class ClangGenerator {
             sb.append("\\) \\/\\* W9901 \\1\\+");
             sb.append(offset);
             sb.append(" \\*\\//g\n");
-            outputStream.write(sb.toString().getBytes());
+        StreamHelper.write(outputStream, sb);
     }
 
 }

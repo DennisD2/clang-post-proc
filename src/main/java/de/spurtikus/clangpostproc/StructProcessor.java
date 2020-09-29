@@ -8,7 +8,7 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
 import java.util.*;
 
 @Slf4j
-public class HeaderProcessor {
+public class StructProcessor {
 
     /**
      * Check visibility of a node
@@ -298,4 +298,5 @@ public class HeaderProcessor {
                 " to " + newOffset + " due to data type boundary " + dataTypeSize);
         return newOffset;
     }
+
 }

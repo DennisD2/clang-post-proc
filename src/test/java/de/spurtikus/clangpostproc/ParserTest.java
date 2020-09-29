@@ -2,20 +2,17 @@ package de.spurtikus.clangpostproc;
 
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTFunctionDeclarator;
-import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
-import org.eclipse.cdt.core.parser.*;
-import org.eclipse.cdt.internal.core.dom.parser.cpp.*;
+import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDeclarator;
 import org.eclipse.core.runtime.CoreException;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import static de.spurtikus.clangpostproc.ClangGenerator.*;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ParserTest {
     // Visitor class for example
@@ -24,7 +21,7 @@ public class ParserTest {
             if ((name.getParent() instanceof CPPASTFunctionDeclarator)) {
                 System.out.println("V " + "IASTName: " + name.getClass().getSimpleName() +
                         "(" + name.getRawSignature() + ") - > parent: " + name.getParent().getClass().getSimpleName());
-                System.out.println("V" + "-- isVisible: " + HeaderProcessor.isVisible(name));
+                System.out.println("V" + "-- isVisible: " + StructProcessor.isVisible(name));
             }
 
             return 3;
@@ -95,13 +92,14 @@ public class ParserTest {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         //String inFileName = "src/test/resources/test-1/TestFile.cpp";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
+
         IASTPreprocessorIncludeStatement[] includes = translationUnit.getIncludeDirectives();
         System.out.println("- INCLUDES ----------------------------------------------------");
         for (IASTPreprocessorIncludeStatement include : includes) {
             System.out.println("include - " + include.getName());
         }
         System.out.println("- printTree ---------------------------------------------------");
-        HeaderProcessor.dumpStructs(translationUnit, 1);
+        StructProcessor.dumpStructs(translationUnit, 1);
     }
 
     @Ignore
@@ -110,6 +108,7 @@ public class ParserTest {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         //String inFileName = "src/test/resources/test-1/TestFile.cpp";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
+
         IASTPreprocessorIncludeStatement[] includes = translationUnit.getIncludeDirectives();
         System.out.println("- INCLUDES ----------------------------------------------------");
         for (IASTPreprocessorIncludeStatement include : includes) {
@@ -134,10 +133,10 @@ public class ParserTest {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        List<String> structNames = HeaderProcessor.getStructNames(translationUnit);
+        List<String> structNames = StructProcessor.getStructNames(translationUnit);
         structNames.forEach(System.out::println);
-        assert(structNames.size() > 0);
-        assert(structNames.contains("SET9052"));
+        assert (structNames.size() > 0);
+        assert (structNames.contains("SET9052"));
     }
 
     @Ignore
@@ -146,7 +145,7 @@ public class ParserTest {
         String inFileName = "src/test/resources/morrow/str_9052.h";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, "SET9052");
+        Map<String, FieldInfo> structInfo = StructProcessor.getStructInfo(translationUnit, "SET9052");
         structInfo.keySet().forEach(si -> System.out.println(si + ", " + structInfo.get(si).getSpecifier()));
 
         Map<String, Integer> dataSizes = createDataSizeMap();
@@ -155,7 +154,7 @@ public class ParserTest {
         int offset = 0;
         for (String si : structInfo.keySet()) {
             FieldInfo fieldInfo = structInfo.get(si);
-            offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
+            offset = StructProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
             int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
@@ -170,10 +169,9 @@ public class ParserTest {
     @Test
     public void testDumpSolutions() throws CoreException, IOException {
         String inFileName = "src/test/resources/morrow/str_9052.h";
-
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        Map<String,FieldInfo> structInfo = HeaderProcessor.getStructInfo(translationUnit, "SET9052");
+        Map<String, FieldInfo> structInfo = StructProcessor.getStructInfo(translationUnit, "SET9052");
         //structInfo.keySet().forEach(si -> System.out.println(si + ", " + structInfo.get(si).getSpecifier()));
 
         Map<String, Integer> dataSizes = createDataSizeMap();
@@ -181,7 +179,7 @@ public class ParserTest {
         int offset = 0;
         for (String si : structInfo.keySet()) {
             FieldInfo fieldInfo = structInfo.get(si);
-            offset = HeaderProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
+            offset = StructProcessor.recalcOffset(dataSizes.get(fieldInfo.getSpecifier()), offset);
             fieldInfo.setOffset(offset);
 
             int fieldSize = getFieldSize(dataSizes, si, fieldInfo);
@@ -189,11 +187,29 @@ public class ParserTest {
             //System.out.println(si + ", " + fieldInfo.getSpecifier() + " offset: " + fieldInfo.getOffset());
             // (int16_t *)(a1 + 204) -> a1->func_status_code
 
-            printSedLines(offset, si, fieldInfo, System.out);
+            writeSedLines(offset, si, fieldInfo, System.out);
             offset += fieldSize;
         }
     }
 
+    @Test
+    public void testDumpDefines() throws CoreException, IOException {
+        String inFileName = "src/test/resources/morrow/sa_defin.h";
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
+
+        System.out.println(translationUnit.getMacroDefinitions().length);
+        Arrays.stream(translationUnit.getMacroDefinitions()).forEach(
+                d -> System.out.println(d)
+        );
+    }
+
+    @Test
+    public void testIEDefines() throws CoreException, IOException {
+        String inFileName = "src/test/resources/morrow/sa_defin.h";
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
+
+        FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, System.out);
+    }
 
 }
 
