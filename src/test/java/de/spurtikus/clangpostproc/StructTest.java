@@ -14,7 +14,7 @@ import java.util.Map;
 
 import static de.spurtikus.clangpostproc.ClangGenerator.*;
 
-public class ParserTest {
+public class StructTest {
     // Visitor class for example
     private ASTVisitor visitor = new ASTVisitor() {
         public int visit(IASTName name) {
@@ -190,25 +190,6 @@ public class ParserTest {
             writeSedLines(offset, si, fieldInfo, System.out);
             offset += fieldSize;
         }
-    }
-
-    @Test
-    public void testDumpDefines() throws CoreException, IOException {
-        String inFileName = "src/test/resources/morrow/sa_defin.h";
-        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
-
-        System.out.println(translationUnit.getMacroDefinitions().length);
-        Arrays.stream(translationUnit.getMacroDefinitions()).forEach(
-                d -> System.out.println(d)
-        );
-    }
-
-    @Test
-    public void testIEDefines() throws CoreException, IOException {
-        String inFileName = "src/test/resources/morrow/sa_defin.h";
-        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
-
-        FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, System.out);
     }
 
 }
