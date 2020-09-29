@@ -144,8 +144,9 @@ public class ClangGenerator {
     }
 
     /**
-     * sed -E -e "s/\((.[0-9]) \+ ([0-9]*)\)/\&\(\1 -> \2 \) \/\* W4321-01 \*\//"
+     *   sed -E -e "s/\((.[0-9]) \+ ([0-9]*)\)/\&\(\1->\2\) \/\* W4321-01 \1\+\2 \*\//"
      *   <src/test/resources/morrow/mtcsa32.dll.c |grep W4321|more
+     *
      * @param offset
      * @param si
      * @param fieldInfo
@@ -155,51 +156,16 @@ public class ClangGenerator {
     public static void printSedLines(int offset, String si, FieldInfo fieldInfo,
                                      OutputStream outputStream) throws IOException {
         StringBuilder sb = new StringBuilder();
-        if (!si.startsWith("m_")) {
-            /*
-            //sb.append("s/(int16_t *)(a1 + 204)/a1->func_status_code/");
-            sb.append("s/(");
-            sb.append(fieldInfo.getSpecifier());
-            sb.append("_t \\*)(a1 + ");
-            sb.append(offset);
-            sb.append(")/\\&(a1->");
-            sb.append(si);
-            sb.append(") \\/\\* a1 + ");
-            sb.append(offset);
-            sb.append(" \\*\\//");*/
-            sb.append("s/(a1 + ");
-            sb.append(offset);
-            sb.append(")/\\&(a1->");
-            sb.append(si);
-            sb.append(") \\/\\* a1 + ");
-            sb.append(offset);
-            sb.append(" \\*\\//\n");
-            outputStream.write(sb.toString().getBytes());
-        } else {
-            //sb.append("s/(int32_t *)(v1 + 204)/a1->func_status_code/");
 
-            // s/(int16_t \*)(a1 + 2)/(int16_t \*)\&(a1->op_mode) \/* a1 + 2 \*\//
-            /*sb.append("s/(");
-            sb.append(fieldInfo.getSpecifier());
-            sb.append(" \\*)(v1 + ");*/
-            sb.append("s/(v1 + ");
+            sb.append("s/\\((.[0-9]) \\+ ");
             sb.append(offset);
-            sb.append(")/\\&(v1->");
+            sb.append("\\)");
+            sb.append("/\\&\\(\\1->");
             sb.append(si);
-            sb.append(") \\/\\* v1 + ");
+            sb.append("\\) \\/\\* W9901 \\1\\+");
             sb.append(offset);
-            sb.append(" \\*\\//\n");
+            sb.append(" \\*\\//g\n");
             outputStream.write(sb.toString().getBytes());
-
-            sb.append("s/(result + ");
-            sb.append(offset);
-            sb.append(")/\\&(result->");
-            sb.append(si);
-            sb.append(") \\/\\* result + ");
-            sb.append(offset);
-            sb.append(" \\*\\//\n");
-            outputStream.write(sb.toString().getBytes());
-        }
     }
 
 }

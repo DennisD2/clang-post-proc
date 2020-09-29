@@ -17,6 +17,9 @@
     <profiles>
         <profile>
             <id>clang</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <!-- Create jar with ClangGenerator.main callable method -->
