@@ -2,6 +2,7 @@ package de.spurtikus.clangpostproc;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.cdt.core.dom.ast.ExpansionOverlapsBoundaryException;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.parser.*;
@@ -32,6 +33,9 @@ public class ClangGenerator {
           } catch (IOException e) {
               log.error("IO Execption", e);
               e.printStackTrace();
+          } catch (ExpansionOverlapsBoundaryException e) {
+              log.error("ExpansionOverlapsBoundaryException", e);
+              e.printStackTrace();
           }
       }
 
@@ -43,7 +47,8 @@ public class ClangGenerator {
      * @throws CoreException
      * @throws IOException
      */
-    protected static void processFile(String inFileName, String outFileName) throws CoreException, IOException {
+    protected static void processFile(String inFileName, String outFileName) throws CoreException, IOException,
+            ExpansionOverlapsBoundaryException {
         // Create translation unit
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
@@ -56,10 +61,15 @@ public class ClangGenerator {
         String structToAnalyze = "SET9052";
         processStruct(structToAnalyze, ostream, translationUnit, dataSizes);
 
+        // process defines
         inFileName = "src/test/resources/morrow/sa_defin.h";
         translationUnit = getIastTranslationUnit(inFileName);
         FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, ostream);
 
+        // process arguments on methods
+        inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
+        translationUnit = getIastTranslationUnit(inFileName);
+        FuncArgsProcessor.processFunctions(translationUnit, ostream);
         StreamHelper.closeStream(ostream);
     }
 
