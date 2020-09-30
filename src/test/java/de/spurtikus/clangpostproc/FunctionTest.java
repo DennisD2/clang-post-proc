@@ -15,11 +15,10 @@ import static de.spurtikus.clangpostproc.ClangGenerator.getIastTranslationUnit;
 public class FunctionTest {
 
     @Test
-    public void testFunctionCalls() throws CoreException, IOException, ExpansionOverlapsBoundaryException {
+    public void testFunctionDumps() throws CoreException, IOException, ExpansionOverlapsBoundaryException {
         String inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        //FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, System.out);
         IASTDeclaration[] decl = translationUnit.getDeclarations();
         //System.out.println(decl.length);
         int ctrAll = 0;
@@ -38,8 +37,6 @@ public class FunctionTest {
                 //System.out.println(function.getDeclarator().getName());
                 if (function.getDeclarator().getName().toString().equals("SetFuncStatusCode")) {
                     System.out.println(function.getRawSignature());
-                    dumpFunction(function);
-
                 }
             }
 
@@ -62,7 +59,31 @@ public class FunctionTest {
 
     }
 
-    public void dumpFunction(CPPASTFunctionDefinition f) throws ExpansionOverlapsBoundaryException {
+    @Test
+    public void testFunctionCalls() throws CoreException, IOException, ExpansionOverlapsBoundaryException {
+        String inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
+        IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
+
+        IASTDeclaration[] decl = translationUnit.getDeclarations();
+        //System.out.println(decl.length);
+        for (IASTDeclaration d: decl) {
+            //System.out.println(d.getChildren().length);
+            IASTNode[] childs = d.getChildren();
+            Class<? extends IASTDeclaration> dClass = d.getClass();
+            //System.out.println(dClass.getCanonicalName());
+
+            if (d instanceof CPPASTFunctionDefinition) {
+                CPPASTFunctionDefinition function = (CPPASTFunctionDefinition) d;
+                //System.out.println(function.getDeclarator().getName());
+                if (function.getDeclarator().getName().toString().equals("SetFuncStatusCode")) {
+                    System.out.println(function.getRawSignature());
+                    processFunction(function);
+                }
+            }
+        }
+    }
+
+    public void processFunction(CPPASTFunctionDefinition f) throws ExpansionOverlapsBoundaryException {
         int index = 0;
         IASTFunctionDeclarator declarator = f.getDeclarator();
         //System.out.println(declarator.getRawSignature());
@@ -71,19 +92,70 @@ public class FunctionTest {
             System.out.println(c.getClass());
             if (c instanceof CPPASTParameterDeclaration) {
                 CPPASTParameterDeclaration cc = (CPPASTParameterDeclaration) c;
-                //System.out.println(cc.getDeclarator().getName().toString());
+                System.out.println(cc.getDeclSpecifier().getRawSignature());
                 functionArgs.add(cc.getDeclarator().getName().toString());
             }
         }
-        System.out.print("Function has these args: " );
+        System.out.print("Function " + f.getDeclarator().getName() + " has these args: " );
         functionArgs.forEach(arg -> System.out.print( arg + ", "));
         System.out.println();
-        dumpFunctionInternal(f, index, functionArgs);
+        String argumentName = getAnyArgumentChangeable(f, index, functionArgs);
+        System.out.println("Result: " + argumentName);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("s/");
+        sb.append(f.getDeclarator().getName());
+        sb.append("\\(");
+        createArgumentPart(declarator, sb);
+        sb.append("\\)//");
+        sb.append(f.getDeclarator().getName());
+        sb.append("\\(");
+        createArgumentPart2(declarator, sb, argumentName, "SET9052 *");
+        sb.append("\\)/");
+        System.out.println(sb.toString());
+    }
+
+    private void createArgumentPart(IASTFunctionDeclarator declarator, StringBuilder sb) {
+        int pos = 0;
+        for (IASTNode c: declarator.getChildren()) {
+            if (c instanceof CPPASTParameterDeclaration) {
+                CPPASTParameterDeclaration cc = (CPPASTParameterDeclaration) c;
+                sb.append(cc.getDeclSpecifier().getRawSignature());
+                sb.append(" ");
+                sb.append(cc.getDeclarator().getName().toString());
+                pos+=2;
+                if (pos< declarator.getChildren().length) {
+                    sb.append(",");
+                    sb.append(" ");
+                }
+            }
+        }
+    }
+
+    private void createArgumentPart2(IASTFunctionDeclarator declarator, StringBuilder sb, String from, String to) {
+        int pos = 0;
+        for (IASTNode c: declarator.getChildren()) {
+            if (c instanceof CPPASTParameterDeclaration) {
+                CPPASTParameterDeclaration cc = (CPPASTParameterDeclaration) c;
+                String sig = cc.getDeclSpecifier().getRawSignature();
+                if (cc.getDeclarator().getName().toString().equals(from)) {
+                    sig = to;
+                }
+                sb.append(sig);
+                sb.append(" ");
+                sb.append(cc.getDeclarator().getName().toString());
+                pos+=2;
+                if (pos< declarator.getChildren().length) {
+                    sb.append(",");
+                    sb.append(" ");
+                }
+            }
+        }
     }
 
     private static String[] knownFunctions = { "GetFuncStatusCode", "GetErrorStatus",
             "ClearFuncStatusCode","TestFuncStatusAndPtr", "RdEngOption"};
-    private void dumpFunctionInternal(IASTNode f, int index, List<String> functionArgs) throws ExpansionOverlapsBoundaryException {
+    private String getAnyArgumentChangeable(IASTNode f, int index, List<String> functionArgs) throws ExpansionOverlapsBoundaryException {
         String indent = "";
         for (int i = 0; i < index; i++) {
             indent += " ";
@@ -105,16 +177,20 @@ public class FunctionTest {
                         boolean isKnown = Arrays.stream(knownFunctions).anyMatch( fu -> fu.equals(funcName));
                         if (isKnown) {
                             System.out.println("Function argument '" + callArg + "' reused in known method call");
+                            return callArg;
                         }
                     }
                 }
-
             }
         }
         if (f.getChildren() != null) {
             for (IASTNode c: f.getChildren()) {
-                dumpFunctionInternal(c, index++, functionArgs);
+                String result = getAnyArgumentChangeable(c, index++, functionArgs);
+                if (result != null) {
+                    return result;
+                }
             }
         }
+        return null;
     }
 }
