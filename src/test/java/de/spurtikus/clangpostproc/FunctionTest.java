@@ -110,7 +110,7 @@ public class FunctionTest {
         sb.append("\\)//");
         sb.append(f.getDeclarator().getName());
         sb.append("\\(");
-        createArgumentPart2(declarator, sb, argumentName, "SET9052 *");
+        createArgumentPartChanged(declarator, sb, argumentName, "SET9052*");
         sb.append("\\)/");
         System.out.println(sb.toString());
     }
@@ -132,7 +132,8 @@ public class FunctionTest {
         }
     }
 
-    private void createArgumentPart2(IASTFunctionDeclarator declarator, StringBuilder sb, String from, String to) {
+    private void createArgumentPartChanged(IASTFunctionDeclarator declarator, StringBuilder sb,
+                                           String from, String to) {
         int pos = 0;
         for (IASTNode c: declarator.getChildren()) {
             if (c instanceof CPPASTParameterDeclaration) {
