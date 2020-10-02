@@ -20,12 +20,14 @@ public class FuncArgsProcessor {
     // Increasing list of functions "known", i.e. they use known functions and thus are
     // also considered "known"
     private static List<String> knownFunctions = new ArrayList<>();
+    private static int ctrChanged;
 
     public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream)
             throws ExpansionOverlapsBoundaryException, IOException {
         initializeKnownFunctions();
         IASTDeclaration[] decl = translationUnit.getDeclarations();
         //System.out.println(decl.length);
+        ctrChanged = 0;
         for (IASTDeclaration d: decl) {
             //System.out.println(d.getChildren().length);
             IASTNode[] childs = d.getChildren();
@@ -41,6 +43,7 @@ public class FuncArgsProcessor {
                 //}
             }
         }
+        System.out.println("Changed " + ctrChanged + " functions.");
     }
 
     private static void initializeKnownFunctions() {
@@ -50,6 +53,7 @@ public class FuncArgsProcessor {
     public static void processFunction(CPPASTFunctionDefinition f, OutputStream ostream)
             throws ExpansionOverlapsBoundaryException, IOException {
         int index = 0;
+
         IASTFunctionDeclarator declarator = f.getDeclarator();
         //System.out.println(declarator.getRawSignature());
         List<String> functionArgs = new ArrayList<>();
@@ -61,7 +65,7 @@ public class FuncArgsProcessor {
                 functionArgs.add(cc.getDeclarator().getName().toString());
             }
         }
-        System.out.print("Function " + f.getDeclarator().getName() + " has these args: " );
+        System.out.print("Function " + declarator.getName() + " has these args: " );
         functionArgs.forEach(arg -> System.out.print( arg + ", "));
         System.out.println();
         String firstArg = functionArgs.get(0);
@@ -70,7 +74,12 @@ public class FuncArgsProcessor {
         if (argumentName != null && argumentName != "null") {
             System.out.println("Changeable arg found: " + argumentName);
             writeSedLine(f, declarator, argumentName, ostream);
+
+            // Add function to list of known functions
+            knownFunctions.add(declarator.getName().toString());
+            ctrChanged++;
         }
+
     }
 
     static String getFirstArgumentChangeable(IASTNode f, int index, String firstArg)
