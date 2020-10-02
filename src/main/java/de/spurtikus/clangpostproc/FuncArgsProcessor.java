@@ -44,6 +44,25 @@ public class FuncArgsProcessor {
             }
         }
         System.out.println("Changed " + ctrChanged + " functions.");
+
+        // Round 2
+        for (IASTDeclaration d: decl) {
+            //System.out.println(d.getChildren().length);
+            IASTNode[] childs = d.getChildren();
+            Class<? extends IASTDeclaration> dClass = d.getClass();
+            //System.out.println(dClass.getCanonicalName());
+
+            if (d instanceof CPPASTFunctionDefinition) {
+                CPPASTFunctionDefinition function = (CPPASTFunctionDefinition) d;
+                //System.out.println(function.getDeclarator().getName());
+                //if (function.getDeclarator().getName().toString().equals("SetFuncStatusCode")) {
+                //System.out.println(function.getRawSignature());
+                if (!knownFunctions.contains(function.getDeclarator().getName().toString())) {
+                    processFunction(function, ostream);
+                }
+            }
+        }
+        System.out.println("Changed2 " + ctrChanged + " functions.");
     }
 
     private static void initializeKnownFunctions() {
