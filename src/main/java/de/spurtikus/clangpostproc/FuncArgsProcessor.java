@@ -8,18 +8,22 @@ import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTParameterDeclaration;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class FuncArgsProcessor {
 
-    private static String[] knownFunctions = { "GetFuncStatusCode", "GetErrorStatus",
+    // Initial list of well known functions
+    private static String[] initialKnownFunctions = { "GetFuncStatusCode", "GetErrorStatus",
             "ClearFuncStatusCode","TestFuncStatusAndPtr", "RdEngOption"};
+    // Increasing list of functions "known", i.e. they use known functions and thus are
+    // also considered "known"
+    private static List<String> knownFunctions = new ArrayList<>();
 
-
-    public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream) throws ExpansionOverlapsBoundaryException, IOException {
+    public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream)
+            throws ExpansionOverlapsBoundaryException, IOException {
+        initializeKnownFunctions();
         IASTDeclaration[] decl = translationUnit.getDeclarations();
         //System.out.println(decl.length);
         for (IASTDeclaration d: decl) {
@@ -39,6 +43,10 @@ public class FuncArgsProcessor {
         }
     }
 
+    private static void initializeKnownFunctions() {
+        Arrays.stream(initialKnownFunctions).forEach( f -> knownFunctions.add(f));
+    }
+
     public static void processFunction(CPPASTFunctionDefinition f, OutputStream ostream)
             throws ExpansionOverlapsBoundaryException, IOException {
         int index = 0;
@@ -56,7 +64,8 @@ public class FuncArgsProcessor {
         System.out.print("Function " + f.getDeclarator().getName() + " has these args: " );
         functionArgs.forEach(arg -> System.out.print( arg + ", "));
         System.out.println();
-        String argumentName = getAnyArgumentChangeable(f, index, functionArgs);
+        String firstArg = functionArgs.get(0);
+        String argumentName = getFirstArgumentChangeable(f, index, firstArg);
 
         if (argumentName != null && argumentName != "null") {
             System.out.println("Changeable arg found: " + argumentName);
@@ -64,7 +73,8 @@ public class FuncArgsProcessor {
         }
     }
 
-    static String getAnyArgumentChangeable(IASTNode f, int index, List<String> functionArgs) throws ExpansionOverlapsBoundaryException {
+    static String getFirstArgumentChangeable(IASTNode f, int index, String firstArg)
+            throws ExpansionOverlapsBoundaryException {
         String indent = "";
         for (int i = 0; i < index; i++) {
             indent += " ";
@@ -82,8 +92,8 @@ public class FuncArgsProcessor {
                     CPPASTIdExpression a = (CPPASTIdExpression) arg;
                     String callArg = a.getName().toString();
                     //System.out.println(callArg);
-                    if (functionArgs.contains(callArg)) {
-                        boolean isKnown = Arrays.stream(knownFunctions).anyMatch(fu -> fu.equals(funcName));
+                    if (firstArg.equals(callArg)) {
+                        boolean isKnown = knownFunctions.stream().anyMatch(fu -> fu.equals(funcName));
                         if (isKnown) {
                             //System.out.println("Function argument '" + callArg + "' reused in known method call");
                             return callArg;
@@ -94,7 +104,7 @@ public class FuncArgsProcessor {
         }
         if (f.getChildren() != null) {
             for (IASTNode c: f.getChildren()) {
-                String result = getAnyArgumentChangeable(c, index++, functionArgs);
+                String result = getFirstArgumentChangeable(c, index++, firstArg);
                 if (result != null) {
                     return result;
                 }
