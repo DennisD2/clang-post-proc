@@ -1,0 +1,6 @@
+FuncStatusFromEngineReply
+SetEngineReplyCode
+GetEngineReplyCode
+Copy9052Struct
+GetFuncStatusCode
+ClearFuncStatusCode

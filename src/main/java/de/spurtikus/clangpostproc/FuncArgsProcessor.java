@@ -23,6 +23,7 @@ public class FuncArgsProcessor {
     // also considered "known"
     private static List<String> knownFunctions = new ArrayList<>();
     private static int ctrChanged;
+    private static int ctrUnknown;
 
     public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream, String structToAnalyze)
             throws ExpansionOverlapsBoundaryException, IOException {
@@ -30,6 +31,7 @@ public class FuncArgsProcessor {
         IASTDeclaration[] decl = translationUnit.getDeclarations();
         //log.debug(decl.length);
         ctrChanged = 0;
+        ctrUnknown = 0;
         for (IASTDeclaration d: decl) {
             //log.debug(d.getChildren().length);
             IASTNode[] childs = d.getChildren();
@@ -60,6 +62,22 @@ public class FuncArgsProcessor {
             }
         }
         log.info("Changed {} functions (round 2)", ctrChanged);
+
+        // dump unknown functions
+        log.info("List of functions still unknown");
+        for (IASTDeclaration d: decl) {
+            IASTNode[] childs = d.getChildren();
+            Class<? extends IASTDeclaration> dClass = d.getClass();
+
+            if (d instanceof CPPASTFunctionDefinition) {
+                CPPASTFunctionDefinition function = (CPPASTFunctionDefinition) d;
+                if (!knownFunctions.contains(function.getDeclarator().getName().toString())) {
+                    log.info(function.getDeclarator().getName().toString());
+                    ctrUnknown++;
+                }
+            }
+        }
+        log.info("{} unknown functions in total", ctrUnknown);
     }
 
     private static void initializeKnownFunctions() {
