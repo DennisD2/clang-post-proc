@@ -59,9 +59,10 @@ public class FunctionTest {
     @Test
     public void testFunctionCalls() throws CoreException, IOException, ExpansionOverlapsBoundaryException {
         String inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
+        String structToAnalyze = "SET9052*";
         IASTTranslationUnit translationUnit = getIastTranslationUnit(inFileName);
 
-        FuncArgsProcessor.processFunctions(translationUnit, System.out);
+        FuncArgsProcessor.processFunctions(translationUnit, System.out, structToAnalyze);
     }
 
 }

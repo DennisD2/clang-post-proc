@@ -1,5 +1,6 @@
 package de.spurtikus.clangpostproc;
 
+import lombok.extern.slf4j.Slf4j;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionCallExpression;
 import org.eclipse.cdt.internal.core.dom.parser.cpp.CPPASTFunctionDefinition;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 public class FuncArgsProcessor {
 
     // Initial list of well known functions
@@ -22,77 +24,72 @@ public class FuncArgsProcessor {
     private static List<String> knownFunctions = new ArrayList<>();
     private static int ctrChanged;
 
-    public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream)
+    public static void processFunctions(IASTTranslationUnit translationUnit, OutputStream ostream, String structToAnalyze)
             throws ExpansionOverlapsBoundaryException, IOException {
         initializeKnownFunctions();
         IASTDeclaration[] decl = translationUnit.getDeclarations();
-        //System.out.println(decl.length);
+        //log.debug(decl.length);
         ctrChanged = 0;
         for (IASTDeclaration d: decl) {
-            //System.out.println(d.getChildren().length);
+            //log.debug(d.getChildren().length);
             IASTNode[] childs = d.getChildren();
             Class<? extends IASTDeclaration> dClass = d.getClass();
-            //System.out.println(dClass.getCanonicalName());
+            //log.debug(dClass.getCanonicalName());
 
             if (d instanceof CPPASTFunctionDefinition) {
                 CPPASTFunctionDefinition function = (CPPASTFunctionDefinition) d;
-                //System.out.println(function.getDeclarator().getName());
+                //log.debug(function.getDeclarator().getName());
                 //if (function.getDeclarator().getName().toString().equals("SetFuncStatusCode")) {
-                //System.out.println(function.getRawSignature());
-                processFunction(function, ostream);
+                //log.debug(function.getRawSignature());
+                processFunction(function, ostream, structToAnalyze);
                 //}
             }
         }
-        System.out.println("Changed " + ctrChanged + " functions.");
+        log.info("Changed {} functions", ctrChanged);
 
         // Round 2
         for (IASTDeclaration d: decl) {
-            //System.out.println(d.getChildren().length);
             IASTNode[] childs = d.getChildren();
             Class<? extends IASTDeclaration> dClass = d.getClass();
-            //System.out.println(dClass.getCanonicalName());
 
             if (d instanceof CPPASTFunctionDefinition) {
                 CPPASTFunctionDefinition function = (CPPASTFunctionDefinition) d;
-                //System.out.println(function.getDeclarator().getName());
-                //if (function.getDeclarator().getName().toString().equals("SetFuncStatusCode")) {
-                //System.out.println(function.getRawSignature());
                 if (!knownFunctions.contains(function.getDeclarator().getName().toString())) {
-                    processFunction(function, ostream);
+                    processFunction(function, ostream, structToAnalyze);
                 }
             }
         }
-        System.out.println("Changed2 " + ctrChanged + " functions.");
+        log.info("Changed {} functions (round 2)", ctrChanged);
     }
 
     private static void initializeKnownFunctions() {
         Arrays.stream(initialKnownFunctions).forEach( f -> knownFunctions.add(f));
     }
 
-    public static void processFunction(CPPASTFunctionDefinition f, OutputStream ostream)
+    public static void processFunction(CPPASTFunctionDefinition f, OutputStream ostream, String structToAnalyze)
             throws ExpansionOverlapsBoundaryException, IOException {
         int index = 0;
 
         IASTFunctionDeclarator declarator = f.getDeclarator();
-        //System.out.println(declarator.getRawSignature());
+        //log.debug(declarator.getRawSignature());
         List<String> functionArgs = new ArrayList<>();
         for (IASTNode c: declarator.getChildren()) {
-            //System.out.println(c.getClass());
+            //log.debug(c.getClass());
             if (c instanceof CPPASTParameterDeclaration) {
                 CPPASTParameterDeclaration cc = (CPPASTParameterDeclaration) c;
-                //System.out.println(cc.getDeclSpecifier().getRawSignature());
+                //log.debug(cc.getDeclSpecifier().getRawSignature());
                 functionArgs.add(cc.getDeclarator().getName().toString());
             }
         }
-        System.out.print("Function " + declarator.getName() + " has these args: " );
-        functionArgs.forEach(arg -> System.out.print( arg + ", "));
-        System.out.println();
+        log.debug("Function has these args: {}", declarator.getName() );
+        functionArgs.forEach(arg -> log.debug( arg + ", "));
+        log.debug("");
         String firstArg = functionArgs.get(0);
         String argumentName = getFirstArgumentChangeable(f, index, firstArg);
 
         if (argumentName != null && argumentName != "null") {
-            System.out.println("Changeable arg found: " + argumentName);
-            writeSedLine(f, declarator, argumentName, ostream);
+            log.debug("Changeable arg found: {}", argumentName);
+            writeSedLine(f, declarator, argumentName, ostream, structToAnalyze);
 
             // Add function to list of known functions
             knownFunctions.add(declarator.getName().toString());
@@ -107,23 +104,23 @@ public class FuncArgsProcessor {
         for (int i = 0; i < index; i++) {
             indent += " ";
         }
-        //System.out.println(/*indent + ": " +*/ f.getClass().getSimpleName());
+        //log.debug(/*indent + ": " +*/ f.getClass().getSimpleName());
         if (f instanceof CPPASTFunctionCallExpression) {
             CPPASTFunctionCallExpression function = (CPPASTFunctionCallExpression) f;
-            System.out.println(f.getRawSignature());
+            log.debug(f.getRawSignature());
             String funcName = function.getSyntax().toString();
-            //System.out.println("funcName: " + funcName);
+            //log.debug("funcName: " + funcName);
             IASTInitializerClause[] args = function.getArguments();
             for (IASTInitializerClause arg: args) {
-                //System.out.println(arg.getClass());
+                //log.debug(arg.getClass());
                 if (arg instanceof CPPASTIdExpression) {
                     CPPASTIdExpression a = (CPPASTIdExpression) arg;
                     String callArg = a.getName().toString();
-                    //System.out.println(callArg);
+                    //log.debug(callArg);
                     if (firstArg.equals(callArg)) {
                         boolean isKnown = knownFunctions.stream().anyMatch(fu -> fu.equals(funcName));
                         if (isKnown) {
-                            //System.out.println("Function argument '" + callArg + "' reused in known method call");
+                            //log.debug("Function argument '" + callArg + "' reused in known method call");
                             return callArg;
                         }
                     }
@@ -181,7 +178,8 @@ public class FuncArgsProcessor {
     }
 
     private static void writeSedLine(CPPASTFunctionDefinition f, IASTFunctionDeclarator declarator,
-                                     String argumentName, OutputStream ostream) throws IOException {
+                                     String argumentName, OutputStream ostream,
+                                     String structToAnalyze) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("s/");
         sb.append(f.getDeclarator().getName());
@@ -190,7 +188,7 @@ public class FuncArgsProcessor {
         sb.append("\\)/");
         sb.append(f.getDeclarator().getName());
         sb.append("\\(");
-        createArgumentPartChanged(declarator, sb, argumentName, "SET9052*");
+        createArgumentPartChanged(declarator, sb, argumentName, structToAnalyze);
         sb.append("\\)/\n");
         ostream.write(sb.toString().getBytes());
     }

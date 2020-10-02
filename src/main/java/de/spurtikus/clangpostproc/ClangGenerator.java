@@ -66,10 +66,10 @@ public class ClangGenerator {
         translationUnit = getIastTranslationUnit(inFileName);
         FuncStatusCodeDefineProcessor.processFuncStatusCodeDefines(translationUnit, ostream);
 
-        // process arguments on methods
+        // process argument 1 on methods (argument is frequently of type SET9052*
         inFileName = "src/test/resources/morrow/mtcsa32.dll.c";
         translationUnit = getIastTranslationUnit(inFileName);
-        FuncArgsProcessor.processFunctions(translationUnit, ostream);
+        FuncArgsProcessor.processFunctions(translationUnit, ostream, structToAnalyze + "*");
         StreamHelper.closeStream(ostream);
     }
 
